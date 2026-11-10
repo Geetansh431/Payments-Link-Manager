@@ -36,13 +36,23 @@ Zero `serious` / `critical` violations allowed. If a page state has no `@a11y` s
 - [ ] No `tabIndex` > 0; no click handlers on non-interactive elements; no `outline: none`
       without a `:focus-visible` replacement.
 - [ ] The links list is a `<ul>` with an accessible name (`aria-label="Payment links"`).
+- [ ] "Allow partial payments" is a real `<input type="checkbox">` with a label; the
+      "Minimum first payment" field it reveals comes right after it and gets the same
+      label/hint/error treatment as other fields.
+- [ ] "Record payment" opens an inline form with a labelled amount field (hint shows the
+      amount due and, for a first partial payment, the minimum); focus moves into it on open
+      and back to the card's "Record payment" button (or the card heading if the link is now
+      Paid) on cancel/save — never to `<body>`.
+- [ ] Each card shows paid / due as text ("Paid ₹300.00 · Due ₹700.00"), not only a bar.
+- [ ] Pending state is per link: a second card's action never re-enables the first's button.
 - [ ] `prefers-reduced-motion` respected for any animation.
 
 ## 3. Manual (browser, via the run skill or Chrome tools)
 
 1. Load `/?mock=reset`. Using **only Tab / Shift+Tab / Enter / Space**: fill the form,
    submit with errors, confirm focus lands on the first error, fix, submit, confirm the
-   announcement and the new row; switch every filter; activate "Copy" and "Mark as paid".
+   announcement and the new row; switch every filter; activate "Copy"; tick "Allow partial
+   payments", create a link, then "Record payment" twice until it is Paid.
 2. Resize to **320px** wide: no horizontal scrollbar (`document.documentElement.scrollWidth
 <= innerWidth`), cards readable, tap targets ≥ 44×44 px, form usable without zoom.
 3. Zoom 200%: nothing clipped or overlapping.

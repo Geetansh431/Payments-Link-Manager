@@ -17,9 +17,14 @@ changed, but read surrounding code as needed to judge correctness.
 1. **Correctness vs spec** — every domain rule in AGENTS.md and the
    payment-link-domain matrices. Money math on floats, stored "Expired" status,
    `Date.now()` inside `src/domain/`, off-by-one at boundaries (₹5,00,000, 100 chars,
-   expiry == now), Paid vs Expired precedence.
+   expiry == now), status precedence Paid > Expired > Partially paid > Active.
+   Partial payments: minimum first payment required when ticked, > 0 and ≤ amount, applied
+   to the first payment only; full-amount-only when partial is off; payment ≤ amount due;
+   `amountPaidPaise` never exceeds `amountPaise`; no payments on Paid/Expired links.
 2. **State bugs** — stale `now`, filter counts derived at a different time than rows, double
-   submit, lost form input on failure, localStorage parse errors not handled.
+   submit, lost form input on failure, localStorage parse errors not handled, pending state
+   shared across links, saved links lost when the storage shape changes (missing v1 → v2
+   migration).
 3. **Accessibility** — the a11y-audit static checklist.
 4. **Tests** — new behaviour without tests; tests that query by class/test-id when a role
    exists; real timers in time-dependent tests; `.only`/`.skip`; assertions that can't fail.

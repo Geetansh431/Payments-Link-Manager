@@ -6,6 +6,8 @@
 
 - **`/verify`** — run the full verification gate and fix what fails.
 - **`/ship-section <N> <summary>`** — verify (incl. E2E), independent review, then commit the section.
+- **`/requirement-change <new requirement>`** — adapt spec, tests and code to a changed
+  requirement, spec first, layer by layer.
 - **Skill `payment-link-domain`** — load before touching `src/domain/`, validation messages,
   status logic, or writing tests for them. Contains the edge-case matrix.
 - **Skill `a11y-audit`** — load before finishing any UI change.
