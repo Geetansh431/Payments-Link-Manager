@@ -23,3 +23,13 @@ npm run dev                        # http://localhost:4317
 | `npm run typecheck` / `npm run lint` | Static checks                                             |
 | `npm test` / `npm run coverage`      | Unit & component tests (Vitest)                           |
 | `npm run e2e`                        | Playwright E2E + accessibility (desktop and 320px mobile) |
+
+## Verification
+
+`./scripts/verify.sh` runs typecheck, lint, repo guards, unit tests with coverage and the
+build. Add `--e2e` to include Playwright, or `--quick` for typecheck + lint + unit only.
+
+## Agent context
+
+- [`AGENTS.md`](AGENTS.md) — tool-agnostic rules for coding agents (architecture, domain rules, conventions)
+- [`CLAUDE.md`](CLAUDE.md) — Claude Code specifics: skills, sub-agents, slash commands, hooks
