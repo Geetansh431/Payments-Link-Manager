@@ -41,8 +41,9 @@ Every row below must exist as a test case (`it.each`) in the matching `*.test.ts
 | `"-5"`, `"1e3"`, `"₹100"`, `"12.3.4"`, `"abc"`, `"."` | `amount.invalid`          |
 | `"007"`                                               | 700                       |
 
-Implementation: strip `,` and spaces → regex `^\d+(\.\d+)?$` → split on `.` → build paise
-from integer + right-padded fraction strings. **No `parseFloat` × 100** (`1.005*100` bug).
+Implementation: remove `,` and trim → split at the `.` with `indexOf`/`slice` → check both
+parts are digits (`isDigits`) → paise = rupees × 100 + fraction padded to 2 digits.
+**No `parseFloat` × 100** (`1.005*100` bug). No regex.
 `formatPaise(149950)` → `"₹1,499.50"`; `formatPaise(50000000)` → `"₹5,00,000.00"`.
 
 ## Description
@@ -55,7 +56,8 @@ Trim first. Count graphemes with `new Intl.Segmenter('en', { granularity: 'graph
 - Both empty → `customer.required` (shown on a group-level error tied to the fieldset).
 - Email: trim, lowercase domain is fine; valid: `a@b.co`, `first.last+tag@sub.example.in`;
   invalid: `a@b`, `a b@c.com`, `@b.com`, `a@.com`, `a@@b.com`, >254 chars.
-- Phone: strip spaces, `-`, `(`, `)`. Then accept `^(?:\+91|91|0)?([6-9]\d{9})$` →
+- Phone: remove spaces, `-`, `(`, `)`, `+`; must then be all digits. Drop a leading `91`
+  (if 12 digits) or `0` (if 11 digits); the rest must be 10 digits starting 6–9 →
   normalise to `+91` + 10 digits. Valid: `9876543210`, `+91 98765 43210`, `098765-43210`;
   invalid: `5876543210`, `987654321`, `98765432100`, `+1 9876543210`.
 - One valid + other non-empty invalid → error on the invalid field.

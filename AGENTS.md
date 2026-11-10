@@ -69,6 +69,11 @@ from the app. Components never touch `localStorage` or `Date.now()` directly.
 
 ## Code conventions
 
+- **Keep it simple.** Prefer the plainest readable approach: small functions, early returns,
+  plain string/array methods (`split`, `slice`, `indexOf`, `includes`, `every`). Avoid regexes
+  unless there is no simple alternative. No clever one-liners.
+- **Every exported function has a JSDoc comment** saying exactly what it does, with `@param`,
+  `@returns` and an `@example` where it helps. Inline comments only for non-obvious "why".
 - TypeScript strict; **no `any`**, no non-null `!` without a comment explaining why.
 - Named exports only. One component per file. Props typed with `type XProps = {...}`.
 - Validation returns data, it never throws. Errors are user-facing strings defined in

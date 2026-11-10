@@ -17,6 +17,10 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/test/**', 'src/**/*.test.{ts,tsx}', 'src/vite-env.d.ts'],
       reporter: ['text', 'html'],
+      // Business rules must stay fully covered.
+      thresholds: {
+        'src/domain/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+      },
     },
   },
 });
