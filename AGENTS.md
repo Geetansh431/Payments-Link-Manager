@@ -35,16 +35,20 @@ Do not add runtime dependencies without stating why in the commit message.
 ```
 src/
   domain/        Pure TS, no React, no I/O. The rules live here and are 100% unit-tested.
-    types.ts       PaymentLink, LinkStatus, CreateLinkInput, ValidationErrors
+    types.ts       PaymentLink, LinkStatus, CreateLinkInput, ValidationErrors, Result
+    messages.ts    every user-facing validation message
     money.ts       parseAmountToPaise(), formatPaise()  — integer paise only
-    customer.ts    normalizePhone(), isValidEmail()
-    validation.ts  validateCreateLink(input, now) -> { ok: true, value } | { ok: false, errors }
-    status.ts      deriveStatus(link, now)            — Paid > Expired > Active
+    customer.ts    isValidEmail(), normalizePhone(), formatPhone()
+    dates.ts       toDateTimeLocal()
+    text.ts        isDigits(), removeChars()
+    validation.ts  validateCreateLink(input, now) -> { ok: true, value } | { ok: false, error }
+    status.ts      deriveStatus(link, now) — Paid > Expired > Active; filters, counts, sorting
   data/          Persistence + mock API, behind the LinksRepository interface.
-    repository.ts  interface LinksRepository { list(); create(); markPaid() }
-    localRepo.ts   localStorage impl; corrupt/unavailable storage -> in-memory + seed
-    mockApi.ts     latency + failure injection (see "Mock API controls")
-    seed.ts        deterministic seed data (Active, Paid, Expired examples)
+    repository.ts     LinksRepository type { list(); create(); markPaid() } + DATA_ERRORS
+    localRepository.ts  createLocalRepository(): delay, forced failures, saves on every change
+    storage.ts        safe localStorage read/write; broken data -> null
+    seed.ts           sample links relative to now (Active, Paid, Expired)
+    appRepository.ts  readMockOptions(?mock=), createAppRepository() used by the app
   hooks/         useNow(intervalMs), usePaymentLinks(), useStatusFilter() (?status= URL param)
   components/    CreateLinkForm, LinksList, LinkCard/LinkRow, StatusFilter, StatusBadge,
                  EmptyState, ErrorState, LiveRegion
