@@ -3,7 +3,7 @@ import { fillCreateForm, linkCards, openApp } from './helpers.ts';
 
 test('create a link, then filter the list by status (happy path)', async ({ page }) => {
   await openApp(page);
-  await expect(linkCards(page)).toHaveCount(4);
+  await expect(linkCards(page)).toHaveCount(5);
 
   // Create a link.
   await fillCreateForm(page, {
@@ -14,7 +14,7 @@ test('create a link, then filter the list by status (happy path)', async ({ page
   await page.getByRole('button', { name: 'Create payment link' }).click();
 
   await expect(page.getByText('Payment link created')).toBeVisible();
-  await expect(linkCards(page)).toHaveCount(5);
+  await expect(linkCards(page)).toHaveCount(6);
   const newCard = linkCards(page).first();
   await expect(newCard).toContainText('Logo design for Café Mocha');
   await expect(newCard).toContainText('₹1,499.50');
@@ -37,8 +37,8 @@ test('create a link, then filter the list by status (happy path)', async ({ page
   await expect(linkCards(page)).not.toContainText(['Logo design for Café Mocha']);
 
   // Filter: All brings everything back.
-  await page.getByRole('button', { name: /^All \(5\)/ }).click();
-  await expect(linkCards(page)).toHaveCount(5);
+  await page.getByRole('button', { name: /^All \(6\)/ }).click();
+  await expect(linkCards(page)).toHaveCount(6);
 });
 
 test('validation errors can be found and fixed with the keyboard alone', async ({ page }) => {
@@ -89,7 +89,7 @@ test('a failed save keeps the typed values and explains what happened', async ({
   );
   await expect(page.getByLabel('Amount (₹)')).toHaveValue('250');
   await expect(page.getByLabel('Email')).toHaveValue('sam@example.com');
-  await expect(linkCards(page)).toHaveCount(4);
+  await expect(linkCards(page)).toHaveCount(5);
 });
 
 test('a load failure shows an error with a retry button', async ({ page }) => {
@@ -99,16 +99,66 @@ test('a load failure shows an error with a retry button', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 });
 
-test('marking a link as paid moves it to the Paid filter', async ({ page }) => {
+test('partial payments: create, pay part, pay the rest, and it survives a reload', async ({
+  page,
+}) => {
   await openApp(page);
 
-  await page.getByRole('button', { name: 'Mark as paid: Bulk order: 40 notebooks' }).click();
+  // Create a link that allows partial payments.
+  await fillCreateForm(page, {
+    amount: '1000',
+    description: 'Guitar course: 4 weeks',
+    email: 'neha@example.com',
+  });
+  await page.getByLabel('Allow partial payments').check();
+  await page.getByLabel('Minimum first payment (₹)').fill('300');
+  await page.getByRole('button', { name: 'Create payment link' }).click();
+  const card = linkCards(page).filter({ hasText: 'Guitar course: 4 weeks' });
+  await expect(card).toContainText('Active');
+  await expect(card).toContainText('Paid ₹0.00 · Due ₹1,000.00');
 
-  await expect(page.getByText('Marked “Bulk order: 40 notebooks” as paid.')).toBeVisible();
+  // A first payment below the minimum is refused.
+  const recordButton = page.getByRole('button', { name: 'Record payment: Guitar course: 4 weeks' });
+  await recordButton.click();
+  const amount = page.getByLabel('Amount received (₹)');
+  await expect(amount).toBeFocused();
+  await amount.fill('200');
+  await page.getByRole('button', { name: 'Save payment' }).click();
+  await expect(page.getByText('The first payment must be at least ₹300.00')).toBeVisible();
+
+  // Pay ₹400: Partially paid.
+  await amount.fill('400');
+  await page.getByRole('button', { name: 'Save payment' }).click();
+  await expect(card).toContainText('Partially paid');
+  await expect(card).toContainText('Paid ₹400.00 · Due ₹600.00');
+  await expect(recordButton).toBeFocused();
+
+  // It shows under the new "Partially paid" filter.
+  await page.getByRole('button', { name: /^Partially paid \(2\)/ }).click();
+  await expect(card).toBeVisible();
+
+  // Survives a page reload (no ?mock=reset this time).
+  await page.goto('/?status=Partially+paid');
+  await expect(card).toContainText('Paid ₹400.00 · Due ₹600.00');
+
+  // Pay the remaining ₹600 (pre-filled): Paid, and the button disappears.
+  await recordButton.click();
+  await expect(page.getByLabel('Amount received (₹)')).toHaveValue('600.00');
+  await page.getByRole('button', { name: 'Save payment' }).click();
+  await expect(page.getByText(/It is now fully paid\./)).toBeVisible();
   await page.getByRole('button', { name: /^Paid \(2\)/ }).click();
-  await expect(linkCards(page).filter({ hasText: 'Bulk order: 40 notebooks' })).toContainText(
-    'Paid',
-  );
+  await expect(card).toContainText('Paid ₹1,000.00 · Due ₹0.00');
+  await expect(recordButton).toHaveCount(0);
+});
+
+test('a link without partial payments must be paid in full', async ({ page }) => {
+  await openApp(page);
+
+  await page.getByRole('button', { name: 'Record payment: Bulk order: 40 notebooks' }).click();
+  await page.getByLabel('Amount received (₹)').fill('1000');
+  await page.getByRole('button', { name: 'Save payment' }).click();
+
+  await expect(page.getByText('This link must be paid in full (₹6,000.00)')).toBeVisible();
 });
 
 test.describe('expiry', () => {
@@ -134,7 +184,7 @@ test.describe('expiry', () => {
     await page.clock.fastForward('03:00');
 
     await expect(card).toContainText('Expired');
-    await expect(card.getByRole('button', { name: /Mark as paid/ })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: /Record payment/ })).toHaveCount(0);
   });
 
   test('an expiry in the past is rejected', async ({ page }) => {

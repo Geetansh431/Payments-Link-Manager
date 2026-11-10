@@ -2,14 +2,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StatusFilter } from './StatusFilter.tsx';
 
-const counts = { All: 4, Active: 2, Paid: 1, Expired: 1 };
+const counts = { All: 5, Active: 2, 'Partially paid': 1, Paid: 1, Expired: 1 };
 
 describe('StatusFilter', () => {
   it('shows each filter with its count and marks the selected one as pressed', () => {
     render(<StatusFilter value="Paid" counts={counts} onChange={() => {}} />);
 
     expect(screen.getByRole('group', { name: 'Filter by status' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'All (4)' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'All (5)' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );

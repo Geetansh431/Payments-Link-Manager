@@ -1,7 +1,7 @@
 import { isValidEmail, normalizePhone } from './customer.ts';
 import { toDateTimeLocal } from './dates.ts';
 import { MESSAGES } from './messages.ts';
-import { parseAmountToPaise } from './money.ts';
+import { parseAmountToPaise, parseMoney } from './money.ts';
 import type { CreateLinkInput, NewLink, Result, ValidationErrors } from './types.ts';
 
 export { MESSAGES } from './messages.ts';
@@ -114,8 +114,13 @@ export function validateCreateLink(
   const description = validateDescription(input.description);
   const customer = validateCustomer(input.email, input.phone);
   const expiry = validateExpiry(input.expiresAt, now);
+  // The minimum can only be compared with a valid amount, so it's checked after the amount.
+  const minFirstPayment: Result<number | null, string> =
+    input.allowPartial && amount.ok
+      ? validateMinFirstPayment(input.minFirstPayment, amount.value)
+      : { ok: true, value: null };
 
-  if (amount.ok && description.ok && customer.ok && expiry.ok) {
+  if (amount.ok && description.ok && customer.ok && expiry.ok && minFirstPayment.ok) {
     return {
       ok: true,
       value: {
@@ -124,6 +129,8 @@ export function validateCreateLink(
         email: customer.value.email,
         phone: customer.value.phone,
         expiresAt: expiry.value,
+        allowPartial: input.allowPartial,
+        minFirstPaymentPaise: minFirstPayment.value,
       },
     };
   }
@@ -132,5 +139,32 @@ export function validateCreateLink(
   if (!amount.ok) errors.amount = amount.error;
   if (!description.ok) errors.description = description.error;
   if (!expiry.ok) errors.expiresAt = expiry.error;
+  if (!minFirstPayment.ok) errors.minFirstPayment = minFirstPayment.error;
   return { ok: false, error: errors };
+}
+
+/**
+ * Checks the "Minimum first payment" field: required when partial payments are allowed,
+ * more than ₹0 and no more than the link amount.
+ *
+ * @param input - The minimum as typed.
+ * @param amountPaise - The link amount in paise (already valid).
+ * @returns The minimum in paise, or the error message to show the user.
+ * @example validateMinFirstPayment('300', 100000) // { ok: true, value: 30000 }
+ */
+export function validateMinFirstPayment(
+  input: string,
+  amountPaise: number,
+): Result<number, string> {
+  const parsed = parseMoney(input);
+  if (!parsed.ok) {
+    const error =
+      parsed.error === 'required'
+        ? MESSAGES.minFirstPayment.required
+        : MESSAGES.amount[parsed.error];
+    return { ok: false, error };
+  }
+  if (parsed.value < 1) return { ok: false, error: MESSAGES.minFirstPayment.min };
+  if (parsed.value > amountPaise) return { ok: false, error: MESSAGES.minFirstPayment.max };
+  return { ok: true, value: parsed.value };
 }

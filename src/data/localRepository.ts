@@ -1,4 +1,5 @@
-import { canMarkPaid, sortNewestFirst } from '../domain/status.ts';
+import { applyPayment, checkPayment } from '../domain/payments.ts';
+import { canRecordPayment, sortNewestFirst } from '../domain/status.ts';
 import type { NewLink, PaymentLink } from '../domain/types.ts';
 import { DATA_ERRORS } from './repository.ts';
 import type { LinksRepository } from './repository.ts';
@@ -66,6 +67,7 @@ export function createLocalRepository(options: LocalRepositoryOptions = {}): Lin
         ...data,
         id: createId(),
         createdAt: now().toISOString(),
+        amountPaidPaise: 0,
         paidAt: null,
       };
       links = [...links, link];
@@ -73,16 +75,19 @@ export function createLocalRepository(options: LocalRepositoryOptions = {}): Lin
       return link;
     },
 
-    async markPaid(id: string) {
+    async recordPayment(id: string, amountPaise: number) {
       await wait(latencyMs);
       const link = links.find((item) => item.id === id);
       if (!link) throw new Error(DATA_ERRORS.notFound);
-      if (!canMarkPaid(link, now())) throw new Error(DATA_ERRORS.notActive);
+      if (!canRecordPayment(link, now())) throw new Error(DATA_ERRORS.notPayable);
 
-      const paidLink: PaymentLink = { ...link, paidAt: now().toISOString() };
-      links = links.map((item) => (item.id === id ? paidLink : item));
+      const problem = checkPayment(link, amountPaise);
+      if (problem !== null) throw new Error(problem);
+
+      const updated = applyPayment(link, amountPaise, now());
+      links = links.map((item) => (item.id === id ? updated : item));
       writeLinks(storage, links);
-      return paidLink;
+      return updated;
     },
   };
 }

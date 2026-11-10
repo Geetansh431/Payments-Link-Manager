@@ -71,20 +71,21 @@ export function usePaymentLinks(repository: LinksRepository) {
   );
 
   /**
-   * Marks a link as paid and updates it in the list.
+   * Records a payment for a link and updates it in the list.
    *
    * @param id - The link's id.
+   * @param amountPaise - The amount received, in paise.
    * @returns The updated link.
-   * @throws Error with a user-facing message if it can't be marked as paid.
+   * @throws Error with a user-facing message if the payment can't be recorded.
    */
-  const markPaid = useCallback(
-    async (id: string) => {
-      const updated = await repository.markPaid(id);
+  const recordPayment = useCallback(
+    async (id: string, amountPaise: number) => {
+      const updated = await repository.recordPayment(id, amountPaise);
       setLinks((current) => current.map((link) => (link.id === id ? updated : link)));
       return updated;
     },
     [repository],
   );
 
-  return { links, loadState, loadError, reload, createLink, markPaid };
+  return { links, loadState, loadError, reload, createLink, recordPayment };
 }

@@ -1,5 +1,5 @@
 import { MESSAGES } from './messages.ts';
-import { formatPaise, parseAmountToPaise } from './money.ts';
+import { formatPaise, parseAmountToPaise, toAmountInput } from './money.ts';
 
 describe('parseAmountToPaise', () => {
   it.each([
@@ -49,5 +49,15 @@ describe('formatPaise', () => {
     [50_000_000, '₹5,00,000.00'],
   ])('formats %i as %s', (paise, text) => {
     expect(formatPaise(paise)).toBe(text);
+  });
+});
+
+describe('toAmountInput', () => {
+  it.each([
+    [70_050, '700.50'],
+    [1, '0.01'],
+    [100_000, '1000.00'],
+  ])('writes %i paise as %s', (paise, text) => {
+    expect(toAmountInput(paise)).toBe(text);
   });
 });

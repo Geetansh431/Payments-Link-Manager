@@ -16,6 +16,8 @@ const valid: CreateLinkInput = {
   email: 'client@example.com',
   phone: '',
   expiresAt: '',
+  allowPartial: false,
+  minFirstPayment: '',
 };
 
 describe('validateDescription', () => {
@@ -78,6 +80,8 @@ describe('validateCreateLink', () => {
         email: 'client@example.com',
         phone: null,
         expiresAt: null,
+        allowPartial: false,
+        minFirstPaymentPaise: null,
       },
     });
   });
@@ -124,6 +128,8 @@ describe('validateCreateLink', () => {
         email: 'not-an-email',
         phone: '12345',
         expiresAt: '2020-01-01T00:00',
+        allowPartial: false,
+        minFirstPayment: '',
       },
       NOW,
     );
@@ -145,5 +151,48 @@ describe('validateCreateLink', () => {
       ok: true,
       value: { expiresAt: new Date(2026, 11, 1, 18, 0).toISOString() },
     });
+  });
+});
+
+describe('partial payments in validateCreateLink', () => {
+  const amount1000 = { ...valid, amount: '1000' };
+
+  it('ignores the minimum when partial payments are off', () => {
+    const result = validateCreateLink({ ...amount1000, minFirstPayment: 'nonsense' }, NOW);
+    expect(result).toMatchObject({
+      ok: true,
+      value: { allowPartial: false, minFirstPaymentPaise: null },
+    });
+  });
+
+  it.each([
+    ['', MESSAGES.minFirstPayment.required],
+    ['0', MESSAGES.minFirstPayment.min],
+    ['1000.01', MESSAGES.minFirstPayment.max],
+    ['10.999', MESSAGES.amount.decimals],
+    ['abc', MESSAGES.amount.invalid],
+  ])('rejects a minimum of %j', (minFirstPayment, error) => {
+    const result = validateCreateLink({ ...amount1000, allowPartial: true, minFirstPayment }, NOW);
+    expect(result).toEqual({ ok: false, error: { minFirstPayment: error } });
+  });
+
+  it.each([
+    ['0.01', 1],
+    ['300', 30_000],
+    ['1000', 100_000],
+  ])('accepts a minimum of %j', (minFirstPayment, paise) => {
+    const result = validateCreateLink({ ...amount1000, allowPartial: true, minFirstPayment }, NOW);
+    expect(result).toMatchObject({
+      ok: true,
+      value: { allowPartial: true, minFirstPaymentPaise: paise },
+    });
+  });
+
+  it('only reports the amount error when the amount itself is invalid', () => {
+    const result = validateCreateLink(
+      { ...valid, amount: 'abc', allowPartial: true, minFirstPayment: '500' },
+      NOW,
+    );
+    expect(result).toEqual({ ok: false, error: { amount: MESSAGES.amount.invalid } });
   });
 });

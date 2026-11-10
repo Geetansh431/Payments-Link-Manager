@@ -40,7 +40,7 @@ describe('createAppRepository', () => {
     await vi.runAllTimersAsync();
     vi.useRealTimers();
 
-    expect(await listed).toHaveLength(4);
+    expect(await listed).toHaveLength(5);
   });
 
   it('uses the long delay with ?mock=slow', async () => {

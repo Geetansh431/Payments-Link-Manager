@@ -11,10 +11,9 @@ type LinksPanelProps = {
   visibleLinks: PaymentLink[];
   filter: Filter;
   now: Date;
-  pendingId: string | null;
   onRetry: () => void;
   onShowAll: () => void;
-  onMarkPaid: (link: PaymentLink) => void;
+  onRecordPayment: (link: PaymentLink, amountPaise: number) => Promise<void>;
 };
 
 /**
@@ -63,12 +62,5 @@ export function LinksPanel(props: LinksPanelProps) {
     );
   }
 
-  return (
-    <LinksList
-      links={visibleLinks}
-      now={props.now}
-      pendingId={props.pendingId}
-      onMarkPaid={props.onMarkPaid}
-    />
-  );
+  return <LinksList links={visibleLinks} now={props.now} onRecordPayment={props.onRecordPayment} />;
 }

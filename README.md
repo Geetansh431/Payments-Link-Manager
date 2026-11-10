@@ -1,7 +1,8 @@
 # Payments-Link-Manager
 
-Payment Links manager for a merchant dashboard — create payment links, see their status
-(Active / Paid / Expired) and filter by status. Frontend only; data is mocked and kept in
+Payment Links manager for a merchant dashboard — create payment links (optionally allowing
+partial payments), record payments, see their status (Active / Partially paid / Paid /
+Expired) and filter by status. Frontend only; data is mocked and kept in
 `localStorage`.
 
 **Stack:** Vite · React 19 · TypeScript · Vitest + Testing Library · Playwright + axe
@@ -31,11 +32,12 @@ npm run e2e
 
 - **Create form** — amount (₹, > 0, max 2 decimals, max ₹5,00,000), description (required,
   max 100 characters), customer email and/or phone (Indian mobile), optional expiry in the
-  future. All errors are shown at once and focus moves to the first one.
-- **Links list** — amount, description, customer, status, created and expiry time, "Copy
-  link", and "Mark as paid" for Active links. Links turn **Expired** on screen when their
+  future, and "Allow partial payments" with a minimum first payment. All errors are shown at
+  once and focus moves to the first one.
+- **Links list** — amount, paid / due, description, customer, status, created and expiry
+  time, "Copy link", and "Record payment" for Active and Partially paid links. Links turn **Expired** on screen when their
   expiry passes, without a refresh.
-- **Status filter** — All / Active / Paid / Expired with counts; kept in the URL
+- **Status filter** — All / Active / Partially paid / Paid / Expired with counts; kept in the URL
   (`?status=Paid`).
 - **States** — loading, load error with "Try again", save error (typed values are kept),
   "No payment links yet", and "No paid links" with "Show all links".

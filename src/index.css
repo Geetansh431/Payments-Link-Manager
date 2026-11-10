@@ -314,7 +314,8 @@ p {
     'info status'
     'amount amount'
     'dates dates'
-    'actions actions';
+    'actions actions'
+    'payment payment';
   gap: 8px 12px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -340,9 +341,6 @@ p {
 
 .link-card__amount {
   grid-area: amount;
-  font-size: 1.125rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .link-card__status {
@@ -385,7 +383,8 @@ p {
     grid-template-areas:
       'info amount status'
       'dates dates dates'
-      'actions actions actions';
+      'actions actions actions'
+      'payment payment payment';
     align-items: start;
   }
 }
@@ -413,6 +412,72 @@ p {
 .badge--expired {
   color: var(--text-muted);
   background: var(--neutral-soft);
+}
+
+/* ---------- Partial payments ---------- */
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.link-card__total {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.link-card__progress {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.link-card__title:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.link-card__payment {
+  grid-area: payment;
+}
+
+.payment-form {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+
+.payment-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button--primary-small {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.button--primary-small:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.badge--partially-paid {
+  color: #8a4b00;
+  background: #fdf1e2;
 }
 
 @media (prefers-reduced-motion: reduce) {

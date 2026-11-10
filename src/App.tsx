@@ -4,10 +4,12 @@ import { LinksPanel } from './components/LinksPanel.tsx';
 import { StatusFilter } from './components/StatusFilter.tsx';
 import { createAppRepository } from './data/appRepository.ts';
 import type { LinksRepository } from './data/repository.ts';
+import { formatPaise } from './domain/money.ts';
+import { amountDue } from './domain/payments.ts';
 import { countByStatus, matchesFilter } from './domain/status.ts';
 import type { PaymentLink } from './domain/types.ts';
 import { useNow } from './hooks/useNow.ts';
-import { toErrorMessage, usePaymentLinks } from './hooks/usePaymentLinks.ts';
+import { usePaymentLinks } from './hooks/usePaymentLinks.ts';
 import { useStatusFilter } from './hooks/useStatusFilter.ts';
 
 type AppProps = {
@@ -20,26 +22,27 @@ type AppProps = {
  */
 export function App({ repository }: AppProps) {
   const [repo] = useState(() => repository ?? createAppRepository());
-  const { links, loadState, loadError, reload, createLink, markPaid } = usePaymentLinks(repo);
+  const { links, loadState, loadError, reload, createLink, recordPayment } = usePaymentLinks(repo);
   const now = useNow();
   const [filter, setFilter] = useStatusFilter();
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
   const counts = countByStatus(links, now);
   const visibleLinks = links.filter((link) => matchesFilter(link, filter, now));
 
-  /** Marks a link as paid and announces the result. */
-  async function handleMarkPaid(link: PaymentLink) {
-    setPendingId(link.id);
-    try {
-      await markPaid(link.id);
-      setNotice(`Marked “${link.description}” as paid.`);
-    } catch (error) {
-      setNotice(toErrorMessage(error));
-    } finally {
-      setPendingId(null);
-    }
+  /**
+   * Records a payment and announces the result. Errors are thrown on to the payment form,
+   * which shows them next to the amount.
+   */
+  async function handleRecordPayment(link: PaymentLink, amountPaise: number) {
+    setNotice('');
+    const updated = await recordPayment(link.id, amountPaise);
+    const due = amountDue(updated);
+    setNotice(
+      due === 0
+        ? `Recorded ${formatPaise(amountPaise)} for “${link.description}”. It is now fully paid.`
+        : `Recorded ${formatPaise(amountPaise)} for “${link.description}”. ${formatPaise(due)} still due.`,
+    );
   }
 
   return (
@@ -61,7 +64,9 @@ export function App({ repository }: AppProps) {
         </section>
 
         <section className="panel panel--list" aria-labelledby="links-heading">
-          <h2 id="links-heading">Your payment links</h2>
+          <h2 id="links-heading" tabIndex={-1}>
+            Your payment links
+          </h2>
           <StatusFilter value={filter} counts={counts} onChange={setFilter} />
           <p role="status" className="notice">
             {notice}
@@ -73,10 +78,9 @@ export function App({ repository }: AppProps) {
             visibleLinks={visibleLinks}
             filter={filter}
             now={now}
-            pendingId={pendingId}
             onRetry={reload}
             onShowAll={() => setFilter('All')}
-            onMarkPaid={handleMarkPaid}
+            onRecordPayment={handleRecordPayment}
           />
         </section>
       </main>

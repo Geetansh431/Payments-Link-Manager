@@ -13,6 +13,8 @@ const newLink: NewLink = {
   email: 'client@example.com',
   phone: null,
   expiresAt: null,
+  allowPartial: false,
+  minFirstPaymentPaise: null,
 };
 
 /** Renders the hook on an in-memory repository and waits for the first load to finish. */
@@ -30,7 +32,7 @@ describe('usePaymentLinks', () => {
     expect(result.current.loadState).toBe('loading');
 
     await waitFor(() => expect(result.current.loadState).toBe('ready'));
-    expect(result.current.links).toHaveLength(4);
+    expect(result.current.links).toHaveLength(5);
     expect(result.current.loadError).toBeNull();
   });
 
@@ -46,7 +48,7 @@ describe('usePaymentLinks', () => {
       .fn<LinksRepository['list']>()
       .mockRejectedValueOnce(new Error(DATA_ERRORS.load))
       .mockResolvedValueOnce([]);
-    const repository = { list, create: vi.fn(), markPaid: vi.fn() };
+    const repository = { list, create: vi.fn(), recordPayment: vi.fn() };
     const { result } = renderHook(() => usePaymentLinks(repository));
     await waitFor(() => expect(result.current.loadState).toBe('error'));
 
@@ -62,23 +64,23 @@ describe('usePaymentLinks', () => {
 
     await act(() => result.current.createLink(newLink));
     expect(result.current.links[0]?.description).toBe('Consultation');
-    expect(result.current.links).toHaveLength(5);
+    expect(result.current.links).toHaveLength(6);
   });
 
   it('leaves the list unchanged and throws when creating fails', async () => {
     const { result } = await renderLoaded({ failCreate: true });
 
     await expect(act(() => result.current.createLink(newLink))).rejects.toThrow(DATA_ERRORS.create);
-    expect(result.current.links).toHaveLength(4);
+    expect(result.current.links).toHaveLength(5);
   });
 
-  it('updates a link in place when it is marked as paid', async () => {
+  it('updates a link in place when a payment is recorded', async () => {
     const { result } = await renderLoaded();
 
-    await act(() => result.current.markPaid('seed-2'));
+    await act(() => result.current.recordPayment('seed-2', 500_000));
     const updated = result.current.links.find((link) => link.id === 'seed-2');
-    expect(updated?.paidAt).toBe(NOW.toISOString());
-    expect(result.current.links).toHaveLength(4);
+    expect(updated?.amountPaidPaise).toBe(500_000);
+    expect(result.current.links).toHaveLength(5);
   });
 });
 

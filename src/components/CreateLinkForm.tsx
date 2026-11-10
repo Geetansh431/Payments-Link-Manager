@@ -32,6 +32,8 @@ const EMPTY_FORM: CreateLinkInput = {
   email: '',
   phone: '',
   expiresAt: '',
+  allowPartial: false,
+  minFirstPayment: '',
 };
 
 /** The input that gets focus for each error, in the order they appear on screen. */
@@ -42,6 +44,7 @@ const FOCUS_ORDER: [FormField, string][] = [
   ['email', 'link-email'],
   ['phone', 'link-phone'],
   ['expiresAt', 'link-expiry'],
+  ['minFirstPayment', 'link-min-first'],
 ];
 
 /**
@@ -84,10 +87,18 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
    * Updates one field and clears its error (and the "email or phone" error when a
    * contact field changes).
    */
-  function updateField(field: keyof CreateLinkInput, value: string) {
+  function updateField(field: Exclude<keyof CreateLinkInput, 'allowPartial'>, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     const isContact = field === 'email' || field === 'phone';
     setErrors((current) => clearErrors(current, isContact ? [field, 'customer'] : [field]));
+  }
+
+  /**
+   * Turns "Allow partial payments" on or off. Turning it off clears the minimum's error.
+   */
+  function togglePartial(allowPartial: boolean) {
+    setValues((current) => ({ ...current, allowPartial }));
+    setErrors((current) => clearErrors(current, ['minFirstPayment']));
   }
 
   /** Validates the form and, if everything is valid, saves the link. */
@@ -142,7 +153,10 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
         error={errors.description}
       />
 
-      <fieldset className="fieldset">
+      <fieldset
+        className="fieldset"
+        aria-describedby={errors.customer ? 'customer-error' : undefined}
+      >
         <legend className="field__label">Customer</legend>
         <p id="customer-hint" className="field__hint">
           Enter an email, a phone number, or both
@@ -160,6 +174,7 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
           value={values.email}
           onChange={(value) => updateField('email', value)}
           error={errors.email}
+          invalid={Boolean(errors.customer)}
           describedBy={errors.customer ? 'customer-hint customer-error' : 'customer-hint'}
         />
         <TextField
@@ -171,6 +186,7 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
           value={values.phone}
           onChange={(value) => updateField('phone', value)}
           error={errors.phone}
+          invalid={Boolean(errors.customer)}
           describedBy={errors.customer ? 'customer-error' : undefined}
         />
       </fieldset>
@@ -185,6 +201,29 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
         onChange={(value) => updateField('expiresAt', value)}
         error={errors.expiresAt}
       />
+
+      <div className="checkbox">
+        <input
+          id="link-allow-partial"
+          type="checkbox"
+          checked={values.allowPartial}
+          onChange={(event) => togglePartial(event.target.checked)}
+        />
+        <label htmlFor="link-allow-partial">Allow partial payments</label>
+      </div>
+
+      {values.allowPartial && (
+        <TextField
+          id="link-min-first"
+          label="Minimum first payment (₹)"
+          hint="Required. More than ₹0 and no more than the amount"
+          inputMode="decimal"
+          autoComplete="off"
+          value={values.minFirstPayment}
+          onChange={(value) => updateField('minFirstPayment', value)}
+          error={errors.minFirstPayment}
+        />
+      )}
 
       {submitError && (
         <p role="alert" className="message message--error">
@@ -203,7 +242,10 @@ export function CreateLinkForm({ now, onCreate }: CreateLinkFormProps) {
               <strong>Payment link created</strong> for {formatPaise(createdLink.amountPaise)}.
             </p>
             <p className="message__url">{paymentUrl(createdLink.id)}</p>
-            <CopyButton text={paymentUrl(createdLink.id)} itemName={createdLink.description} />
+            <CopyButton
+              text={paymentUrl(createdLink.id)}
+              itemName={`new link ${createdLink.description}`}
+            />
           </div>
         )}
       </div>

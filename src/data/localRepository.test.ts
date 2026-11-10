@@ -1,17 +1,21 @@
+import { MESSAGES } from '../domain/messages.ts';
 import { deriveStatus } from '../domain/status.ts';
 import type { NewLink } from '../domain/types.ts';
 import { createLocalRepository } from './localRepository.ts';
 import { DATA_ERRORS } from './repository.ts';
-import { STORAGE_KEY } from './storage.ts';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from './storage.ts';
 
 const NOW = new Date('2026-11-10T12:00:00.000Z');
+const SEED_COUNT = 5;
 
 const newLink: NewLink = {
-  amountPaise: 149_950,
+  amountPaise: 100_000,
   description: 'Logo design',
   email: 'client@example.com',
   phone: null,
   expiresAt: null,
+  allowPartial: true,
+  minFirstPaymentPaise: 30_000,
 };
 
 /** Builds a repository on jsdom's localStorage with a fixed clock and predictable ids. */
@@ -34,14 +38,21 @@ describe('createLocalRepository', () => {
       'Active',
       'Expired',
       'Paid',
+      'Partially paid',
     ]);
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toHaveLength(4);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toHaveLength(SEED_COUNT);
   });
 
-  it('creates a link with an id, created time and no payment yet', async () => {
+  it('creates a link with an id, created time and nothing paid yet', async () => {
     const created = await setup().create(newLink);
 
-    expect(created).toEqual({ ...newLink, id: 'id-1', createdAt: NOW.toISOString(), paidAt: null });
+    expect(created).toEqual({
+      ...newLink,
+      id: 'id-1',
+      createdAt: NOW.toISOString(),
+      amountPaidPaise: 0,
+      paidAt: null,
+    });
   });
 
   it('lists the newest link first', async () => {
@@ -52,50 +63,106 @@ describe('createLocalRepository', () => {
     expect(first?.id).toBe('id-1');
   });
 
-  it('keeps links after a page refresh', async () => {
-    await setup().create(newLink);
+  it('keeps links and payments after a page reload', async () => {
+    const repo = setup();
+    const { id } = await repo.create(newLink);
+    await repo.recordPayment(id, 30_000);
 
-    const afterRefresh = await setup().list();
-    expect(afterRefresh.some((link) => link.description === 'Logo design')).toBe(true);
+    const afterReload = await setup().list();
+    const saved = afterReload.find((link) => link.id === id);
+    expect(saved?.amountPaidPaise).toBe(30_000);
+    expect(saved && deriveStatus(saved, NOW)).toBe('Partially paid');
   });
 
-  it('marks an Active link as paid', async () => {
+  it('records a first part payment, then the rest', async () => {
     const repo = setup();
     const { id } = await repo.create(newLink);
 
-    const paid = await repo.markPaid(id);
-    expect(paid.paidAt).toBe(NOW.toISOString());
+    const partial = await repo.recordPayment(id, 30_000);
+    expect(deriveStatus(partial, NOW)).toBe('Partially paid');
+    expect(partial.paidAt).toBeNull();
+
+    const paid = await repo.recordPayment(id, 70_000);
     expect(deriveStatus(paid, NOW)).toBe('Paid');
+    expect(paid.paidAt).toBe(NOW.toISOString());
+  });
+
+  it('rejects a payment the rules do not allow, and saves nothing', async () => {
+    const repo = setup();
+    const { id } = await repo.create(newLink);
+
+    await expect(repo.recordPayment(id, 10_000)).rejects.toThrow(
+      MESSAGES.payment.belowMinimum('₹300.00'),
+    );
+    const [first] = await repo.list();
+    expect(first?.amountPaidPaise).toBe(0);
   });
 
   it.each([
-    ['an expired link', 'seed-4', DATA_ERRORS.notActive],
-    ['an already paid link', 'seed-3', DATA_ERRORS.notActive],
+    ['an expired link', 'seed-4', DATA_ERRORS.notPayable],
+    ['an already paid link', 'seed-3', DATA_ERRORS.notPayable],
     ['an unknown link', 'missing', DATA_ERRORS.notFound],
-  ])('refuses to mark %s as paid', async (_, id, message) => {
-    await expect(setup().markPaid(id)).rejects.toThrow(message);
+  ])('refuses a payment on %s', async (_, id, message) => {
+    await expect(setup().recordPayment(id, 100)).rejects.toThrow(message);
   });
 
   it('falls back to sample links when saved data is broken', async () => {
     localStorage.setItem(STORAGE_KEY, '{not json');
-    expect(await setup().list()).toHaveLength(4);
+    expect(await setup().list()).toHaveLength(SEED_COUNT);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ not: 'a list' }));
-    expect(await setup().list()).toHaveLength(4);
+    expect(await setup().list()).toHaveLength(SEED_COUNT);
   });
 
   it('skips saved entries that are not valid links', async () => {
-    const valid = { ...newLink, id: 'ok', createdAt: NOW.toISOString(), paidAt: null };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([valid, { id: 42 }, null]));
+    const valid = {
+      ...newLink,
+      id: 'ok',
+      createdAt: NOW.toISOString(),
+      amountPaidPaise: 0,
+      paidAt: null,
+    };
+    const overpaid = { ...valid, id: 'overpaid', amountPaidPaise: 100_001 };
+    const badDate = { ...valid, id: 'bad-date', expiresAt: 'garbage' };
+    const fraction = { ...valid, id: 'fraction', amountPaise: 1.5 };
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([valid, overpaid, badDate, fraction, { id: 42 }, null]),
+    );
 
     expect((await setup().list()).map((link) => link.id)).toEqual(['ok']);
+  });
+
+  it('migrates links saved before partial payments existed (v1)', async () => {
+    const v1Unpaid = {
+      id: 'old-1',
+      amountPaise: 50_000,
+      description: 'Old unpaid link',
+      email: 'a@b.co',
+      phone: null,
+      createdAt: '2026-11-01T00:00:00.000Z',
+      expiresAt: null,
+      paidAt: null,
+    };
+    const v1Paid = { ...v1Unpaid, id: 'old-2', paidAt: '2026-11-02T00:00:00.000Z' };
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify([v1Unpaid, v1Paid, { id: 7 }]));
+
+    const links = await setup().list();
+
+    expect(links.map((link) => [link.id, deriveStatus(link, NOW)])).toEqual([
+      ['old-1', 'Active'],
+      ['old-2', 'Paid'],
+    ]);
+    expect(links[0]).toMatchObject({ allowPartial: false, minFirstPaymentPaise: null });
+    expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toHaveLength(2);
   });
 
   it('works in memory when storage is not available', async () => {
     const repo = setup({ storage: null });
     await repo.create(newLink);
 
-    expect(await repo.list()).toHaveLength(5);
+    expect(await repo.list()).toHaveLength(SEED_COUNT + 1);
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -127,7 +194,7 @@ describe('createLocalRepository', () => {
     const repo = setup({ failCreate: true });
 
     await expect(repo.create(newLink)).rejects.toThrow(DATA_ERRORS.create);
-    expect(await repo.list()).toHaveLength(4);
+    expect(await repo.list()).toHaveLength(SEED_COUNT);
   });
 
   it('waits for the fake network delay before answering', async () => {

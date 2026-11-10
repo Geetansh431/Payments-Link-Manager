@@ -24,4 +24,19 @@ export const MESSAGES = {
     past: 'Expiry must be in the future',
     invalid: 'Enter a valid date and time',
   },
+  minFirstPayment: {
+    required: 'Enter a minimum first payment',
+    min: 'Minimum first payment must be more than ₹0',
+    max: "Minimum first payment can't be more than the amount",
+  },
+  payment: {
+    required: 'Enter the amount received',
+    min: 'Payment must be more than ₹0',
+    /** @param due - The amount due, already formatted, e.g. "₹700.00". */
+    max: (due: string) => `Payment can't be more than the amount due (${due})`,
+    /** @param minimum - The minimum first payment, already formatted. */
+    belowMinimum: (minimum: string) => `The first payment must be at least ${minimum}`,
+    /** @param due - The amount due, already formatted. */
+    fullOnly: (due: string) => `This link must be paid in full (${due})`,
+  },
 } as const;

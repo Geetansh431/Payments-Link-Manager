@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, Ref } from 'react';
 
 type TextFieldProps = {
   /** The input's id; also used to build the hint and error ids. */
@@ -10,6 +10,10 @@ type TextFieldProps = {
   hint?: string | undefined;
   /** Error message; when set, the field is marked invalid. */
   error?: string | undefined;
+  /** Lets a parent focus the input. */
+  ref?: Ref<HTMLInputElement> | undefined;
+  /** Marks the field invalid without its own message, e.g. for a group error. */
+  invalid?: boolean | undefined;
   /** Extra ids to describe the field, e.g. a group error. */
   describedBy?: string | undefined;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'value' | 'onChange'>;
@@ -25,6 +29,8 @@ export function TextField({
   onChange,
   hint,
   error,
+  invalid,
+  ref,
   describedBy,
   ...inputProps
 }: TextFieldProps) {
@@ -46,11 +52,12 @@ export function TextField({
       )}
       <input
         {...inputProps}
+        ref={ref}
         id={id}
         className="field__input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error ? true : undefined}
+        aria-invalid={error || invalid ? true : undefined}
         aria-describedby={descriptionIds || undefined}
       />
       {error && (

@@ -15,7 +15,7 @@ test.describe('accessibility @a11y', () => {
     await expectNoA11yViolations(page);
   });
 
-  for (const filter of ['Active', 'Paid', 'Expired']) {
+  for (const filter of ['Active', 'Partially paid', 'Paid', 'Expired']) {
     test(`the ${filter} filter has no serious accessibility problems`, async ({ page }) => {
       await openApp(page);
       await page.getByRole('button', { name: new RegExp(`^${filter}`) }).click();
@@ -23,6 +23,16 @@ test.describe('accessibility @a11y', () => {
       await expectNoA11yViolations(page);
     });
   }
+
+  test('the record payment form has no serious accessibility problems', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: 'Record payment: Website design: 50% deposit' }).click();
+    await page.getByLabel('Amount received (₹)').fill('1');
+    await page.getByRole('button', { name: 'Save payment' }).click();
+    await expect(page.getByText(/The first payment must be at least/)).toBeVisible();
+
+    await expectNoA11yViolations(page);
+  });
 
   test('the load error state has no serious accessibility problems', async ({ page }) => {
     await page.goto('/?mock=reset,fail-load');

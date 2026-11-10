@@ -6,7 +6,13 @@ import { CreateLinkForm } from './CreateLinkForm.tsx';
 
 /** Turns submitted data into a saved link, like the repository would. */
 function savedLink(data: NewLink): PaymentLink {
-  return { ...data, id: 'new-1', createdAt: new Date().toISOString(), paidAt: null };
+  return {
+    ...data,
+    id: 'new-1',
+    createdAt: new Date().toISOString(),
+    amountPaidPaise: 0,
+    paidAt: null,
+  };
 }
 
 /** Renders the form with a create function the test can control. */
@@ -92,6 +98,8 @@ describe('CreateLinkForm', () => {
       email: null,
       phone: '+919876543210',
       expiresAt: null,
+      allowPartial: false,
+      minFirstPaymentPaise: null,
     });
     expect(await screen.findByText('Payment link created')).toBeInTheDocument();
     expect(screen.getByText('https://pay.example.com/l/new-1')).toBeInTheDocument();
@@ -116,5 +124,44 @@ describe('CreateLinkForm', () => {
     expect(amountInput()).toHaveValue('250');
     expect(emailInput()).toHaveValue('sam@example.com');
     expect(submitButton()).toBeEnabled();
+  });
+
+  it('asks for a minimum first payment only when partial payments are allowed', async () => {
+    const { user, onCreate } = setup();
+    expect(screen.queryByLabelText('Minimum first payment (₹)')).not.toBeInTheDocument();
+
+    await user.type(amountInput(), '1000');
+    await user.type(descriptionInput(), 'Course fee');
+    await user.type(emailInput(), 'a@b.co');
+    await user.click(screen.getByLabelText('Allow partial payments'));
+    await user.click(submitButton());
+
+    const minimum = screen.getByLabelText('Minimum first payment (₹)');
+    expect(minimum).toHaveFocus();
+    expect(minimum).toHaveAccessibleDescription(
+      expect.stringContaining(MESSAGES.minFirstPayment.required),
+    );
+
+    await user.type(minimum, '1200');
+    await user.click(submitButton());
+    expect(screen.getByText(MESSAGES.minFirstPayment.max)).toBeInTheDocument();
+
+    await user.clear(minimum);
+    await user.type(minimum, '250');
+    await user.click(submitButton());
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ allowPartial: true, minFirstPaymentPaise: 25_000 }),
+    );
+  });
+
+  it('marks email and phone invalid when neither is given', async () => {
+    const { user } = setup();
+    await user.click(submitButton());
+
+    expect(emailInput()).toHaveAttribute('aria-invalid', 'true');
+    expect(phoneInput()).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('group', { name: 'Customer' })).toHaveAccessibleDescription(
+      MESSAGES.customer.required,
+    );
   });
 });
