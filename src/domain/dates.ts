@@ -11,3 +11,22 @@ export function toDateTimeLocal(date: Date): string {
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return `${day}T${time}`;
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+/**
+ * Formats an ISO timestamp for display in the user's local time.
+ *
+ * @param iso - An ISO 8601 timestamp, e.g. a link's `createdAt`.
+ * @returns A short readable date and time.
+ * @example formatDateTime('2026-11-10T06:30:00.000Z') // '10 Nov 2026, 12:00 pm' (in IST)
+ */
+export function formatDateTime(iso: string): string {
+  return dateTimeFormatter.format(new Date(iso));
+}

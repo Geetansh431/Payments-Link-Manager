@@ -50,14 +50,15 @@ src/
     seed.ts           sample links relative to now (Active, Paid, Expired)
     appRepository.ts  readMockOptions(?mock=), createAppRepository() used by the app
   hooks/         useNow(intervalMs), usePaymentLinks(), useStatusFilter() (?status= URL param)
-  components/    CreateLinkForm, LinksList, LinkCard/LinkRow, StatusFilter, StatusBadge,
-                 EmptyState, ErrorState, LiveRegion
+  components/    CreateLinkForm (+ TextField), LinksPanel (loading/error/empty/list),
+                 LinksList, StatusFilter, StatusBadge, CopyButton (+ copyText)
   App.tsx
 e2e/             Playwright specs (*.spec.ts)
 ```
 
 Dependency direction: `components -> hooks -> data -> domain`. `domain` imports nothing
-from the app. Components never touch `localStorage` or `Date.now()` directly.
+from the app. Components never touch `localStorage`; they get the time from `useNow()` (the
+form reads a fresh `new Date()` only at submit, to check the expiry).
 
 ## Non-negotiable domain rules (details: payment-link-domain skill)
 
@@ -87,15 +88,17 @@ from the app. Components never touch `localStorage` or `Date.now()` directly.
 
 ## Accessibility & responsive (WCAG 2.1 AA) — required, not polish
 
-- Native elements first (`<button>`, `<label>`, `<fieldset>/<legend>`, `<table>`); ARIA only
-  to fill gaps.
+- Native elements first (`<button>`, `<label>`, `<fieldset>/<legend>`, `<ul>/<li>`); ARIA
+  only to fill gaps.
 - Each input: visible `<label>`, `aria-invalid` when invalid, error linked via
   `aria-describedby`. On failed submit, move focus to the first invalid field.
-- Success/failure of async actions announced via a single polite `aria-live` region.
+- Success/failure of async actions announced via `role="status"` (polite) regions; load and
+  save failures use `role="alert"`.
 - Status filter is a group of toggle buttons with `aria-pressed` (or radio group) — operable
   by keyboard alone; visible `:focus-visible` outline everywhere.
 - Status is conveyed by text, not colour alone. Contrast ≥ 4.5:1.
-- Works at **320px** wide with no horizontal scroll; table → stacked cards below 640px.
+- Works at **320px** wide with no horizontal scroll. The list is a `<ul>` of cards that
+  stack on narrow screens and lay out as rows from 640px. Tap targets ≥ 44px.
 
 ## Testing conventions
 

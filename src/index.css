@@ -1,12 +1,17 @@
 :root {
-  --bg: #f7f8fa;
+  --bg: #f5f6f8;
   --surface: #ffffff;
   --text: #1a1d23;
-  --text-muted: #555c68;
-  --border: #d5d9e0;
+  --text-muted: #4f5662;
+  --border: #d0d5dd;
   --accent: #1f4fd1;
+  --accent-hover: #183fa8;
+  --accent-soft: #e8eefc;
   --danger: #b42318;
+  --danger-soft: #fdecea;
   --success: #067647;
+  --success-soft: #e6f4ec;
+  --neutral-soft: #eceef2;
   --focus: #1f4fd1;
   --radius: 8px;
   --space: 16px;
@@ -34,10 +39,33 @@ body {
   background: var(--bg);
 }
 
+h2 {
+  margin: 0 0 var(--space);
+  font-size: 1.125rem;
+}
+
+p {
+  margin: 0;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Page layout ---------- */
 
 .skip-link {
   position: absolute;
@@ -54,7 +82,7 @@ body {
 
 .app-header,
 .app-main {
-  max-width: 1040px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: var(--space);
 }
@@ -64,16 +92,327 @@ body {
   font-size: 1.5rem;
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+.app-header__subtitle {
+  color: var(--text-muted);
+}
+
+.app-main {
+  display: grid;
+  gap: var(--space);
+  padding-top: 0;
+}
+
+.app-main:focus {
+  outline: none;
+}
+
+.panel {
+  min-width: 0;
+  padding: var(--space);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@media (min-width: 900px) {
+  .app-main {
+    grid-template-columns: 340px 1fr;
+    align-items: start;
+  }
+}
+
+/* ---------- Buttons ---------- */
+
+.button {
+  min-height: 44px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button--primary {
+  width: 100%;
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.button--secondary {
+  color: var(--accent);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* ---------- Form ---------- */
+
+.create-form {
+  display: grid;
+  gap: var(--space);
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field__label {
+  font-weight: 600;
+}
+
+.field__hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.field__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.field__input[aria-invalid='true'] {
+  border: 2px solid var(--danger);
+}
+
+.field__error {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fieldset legend {
+  padding: 0 4px;
+}
+
+.message {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+}
+
+.message--error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.message--success {
+  background: var(--success-soft);
+}
+
+.message__url {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Filter ---------- */
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter__button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.filter__button[aria-pressed='true'] {
+  color: #ffffff;
+  font-weight: 600;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.filter__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.notice:not(:empty) {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--neutral-soft);
+  border-radius: var(--radius);
+}
+
+/* ---------- List states ---------- */
+
+.state {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: var(--space);
+  padding: var(--space);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.state__title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.state--error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-style: solid;
+}
+
+/* ---------- Links ---------- */
+
+.links {
+  display: grid;
+  gap: 12px;
+  margin: var(--space) 0 0;
   padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  list-style: none;
+}
+
+.link-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'info status'
+    'amount amount'
+    'dates dates'
+    'actions actions';
+  gap: 8px 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.link-card__info {
+  grid-area: info;
+  min-width: 0;
+}
+
+.link-card__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.link-card__customer {
+  display: grid;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.link-card__amount {
+  grid-area: amount;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.link-card__status {
+  grid-area: status;
+}
+
+.link-card__dates {
+  grid-area: dates;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.link-card__dates dt {
+  display: inline;
+  color: var(--text-muted);
+}
+
+.link-card__dates dt::after {
+  content: ': ';
+}
+
+.link-card__dates dd {
+  display: inline;
+  margin: 0;
+}
+
+.link-card__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .link-card {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      'info amount status'
+      'dates dates dates'
+      'actions actions actions';
+    align-items: start;
+  }
+}
+
+/* ---------- Status badge ---------- */
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.badge--active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.badge--paid {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.badge--expired {
+  color: var(--text-muted);
+  background: var(--neutral-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
